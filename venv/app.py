@@ -51,14 +51,10 @@ def index():
     with neo4j_driver._driver.session() as session:
         result = session.run("MATCH (n) RETURN n LIMIT 25")
         nodes = [record['n']['name'] for record in result]
-        
-    response_data = {
-        "data": nodes,
-        "message": "Hello INFO212"
-    }
     
     return jsonify(response_data)
 
+<<<<<<< Updated upstream
 @app.route('/get_cars', methods=['GET'])
 def get_cars():
     cars = car_dao.find_all_cars()
@@ -88,6 +84,82 @@ def delete_car_info():
     car_dao.delete_car(data['reg'])
     cars = car_dao.find_all_cars()
     return jsonify(cars)
+=======
+@app.route('/add_employee', methods=['POST'])
+def add_employee():
+    data = request.get_json()
+    name = data.get("name")
+    address = data.get("address")
+    branch = data.get("branch")
+
+    with neo4j_driver._driver.session() as session:
+        session.write_transaction(add_employee_to_neo4j, name, address, branch)
+
+    return "Employee added"
+
+
+def add_employee_to_neo4j(tx, name, address, branch):
+    query = (
+        "CREATE (e:Employee {name: $name, address: $address, branch: $branch})"
+    )
+    tx.run(query, name=name, address=address, branch=branch)
+
+
+# ... (annen kode)
+
+@app.route('/delete_employee/<name>', methods=['DELETE'])
+def delete_employee(name):
+    with neo4j_driver._driver.session() as session:
+        result = session.write_transaction(delete_employee_from_neo4j, name)
+
+    if result:
+        return f"Employee {name} has been deleted"
+    else:
+        return f"Employee {name} not found"
+
+def delete_employee_from_neo4j(tx, name):
+    query = (
+        "MATCH (e:Employee {name: $name}) DELETE e"
+    )
+    result = tx.run(query, name=name)
+    return result.consume().counters.nodes_deleted
+
+# ... (annen kode)
+
+
+def add_employee_to_neo4j(tx, name, address, branch):
+    query = (
+        "CREATE (e:Employee {name: $name, address: $address, branch: $branch})"
+    )
+    tx.run(query, name=name, address=address, branch=branch)
+
+@app.route('/get_employee/<name>', methods=['GET'])
+def get_employee(name):
+    with neo4j_driver._driver.session() as session:
+        result = session.read_transaction(get_employee_from_neo4j, name)
+
+    if result:
+        employee_data = {
+            "name": result["name"],
+            "address": result["address"],
+            "branch": result["branch"]
+        }
+        return jsonify(employee_data)
+    else:
+        return jsonify({"message": "Employee not found"}), 404
+
+
+def get_employee_from_neo4j(tx, name):
+    query = (
+        "MATCH (e:Employee {name: $name}) RETURN e"
+    )
+    result = tx.run(query, name=name).single()
+    if result:
+        return result["e"]
+    else:
+        return None
+
+>>>>>>> Stashed changes
 
 if __name__ == '__main__':
     app.run()
