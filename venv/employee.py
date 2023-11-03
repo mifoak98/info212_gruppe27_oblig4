@@ -90,6 +90,7 @@ def delete_employee_from_neo4j(tx, name):
 def update_employee(name):
     data = request.get_json()
     new_address = data.get('address')
+    
 
     with neo4j_driver._driver.session() as session:
         result = session.read_transaction(get_employee_from_neo4j, name)
@@ -116,6 +117,36 @@ def update_employee_in_neo4j(tx, name, address, branch):
         "MATCH (e:Employee {name: $name}) SET e.address = $address"
     )
     tx.run(query, name=name, address=address)
+
+
+
+
+
+
+
+
+
+
+@app.route('/add_car', methods=["POST"])
+def add_car():
+    data = request.get_json()
+    carID = data.get("carID")
+    car_brand = data.get("car_brand")
+    availability = data.get("availability")
+
+    with neo4j_driver._driver.session() as session:
+        session.write_transaction(add_car_to_neo4j, carID, car_brand, availability)
+
+    return "Car added to Neo4j"
+
+def add_car_to_neo4j(tx, carID, car_brand, availability):
+    query = (
+        "CREATE (e:Car {carID: $carID, car_branc: $car_brand, availability: $availability})"
+    )
+    tx.run(query, carID=carID, car_brand=car_brand, availability=availability)
+        
+
+
 
 if __name__ == '__main__':
     app.run()
