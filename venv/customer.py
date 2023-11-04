@@ -22,40 +22,38 @@ def add_customer():
     data = request.get_json()
     name = data.get("name")
     address = data.get("address")
-    customerID = data.get("customerID")
 
     with neo4j_driver._driver.session() as session:
-        session.write_transaction(add_customer_to_neo4j, name, address, customerID)
+        session.write_transaction(add_customer_to_neo4j, name, address)
 
     return "Customer added to Neo4j"
 
-def add_customer_to_neo4j(tx, name, address, customerID):
+def add_customer_to_neo4j(tx, name, address):
     query = (
-        "CREATE (c:Customer {name: $name, address: $address, customerID: $customerID})"
+        "CREATE (c:Customer {name: $name, address: $address})"
     )
-    tx.run(query, name=name, address=address, customerID=customerID)
+    tx.run(query, name=name, address=address)
 
-@app.route('/get_customer/<name>', methods=['GET'])
-def get_customer(name):
+@app.route('/get_customer/<customerID>', methods=['GET'])
+def get_customer(customerID):
     with neo4j_driver._driver.session() as session:
-        result = session.read_transaction(get_customer_from_neo4j, name)
+        result = session.read_transaction(get_customer_from_neo4j, customerID)
 
     if result:
-        # Extract node properties and convert to a dictionary
         customer_data = {
+            "customerID": customerID,
             "name": result["name"],
-            "address": result["address"],
-            "customerID": result["customerID"]
+            "address": result["address"]
         }
         return jsonify(customer_data)
     else:
         return jsonify({"message": "Customer not found"}), 404  # Return a 404 Not Found status for no result
 
-def get_customer_from_neo4j(tx, name):
+def get_customer_from_neo4j(tx, customerID):
     query = (
-        "MATCH (c:Customer {name: $name}) RETURN c"
+        "MATCH (c:Customer {customerID: $customerID}) RETURN c"
     )
-    result = tx.run(query, name=name).single()
+    result = tx.run(query, customerID=customerID).single()
     if result:
         return result["c"]
     else:
@@ -77,35 +75,35 @@ def delete_customer_from_neo4j(tx, customerID):
     result = tx.run(query, customerID=customerID)
     return result.consume().counters.nodes_deleted
 
-@app.route('/update_customer/<name>', methods=['PUT'])
-def update_customer(name):
+@app.route('/update_customer/<customerID>', methods=['PUT'])
+def update_customer(customerID):
     data = request.get_json()
-    new_address = data.get('address')
+    updated_properties = data.get('updated_properties')
 
     with neo4j_driver._driver.session() as session:
-        result = session.read_transaction(get_customer_from_neo4j, name)
+        result = session.read_transaction(get_customer_from_neo4j, customerID)
 
         if not result:
             return "Customer not found"
 
-        # Hent eksisterende verdier
-        current_name = result["name"]
-        current_address = result["address"]
+        current_properties = {
+            "name": result["name"],
+            "address": result["address"]
+        }
 
-        # Oppdater kun de feltene som er angitt i JSON-dataen
-        if new_address:
-            current_address = new_address
+        for prop, value in updated_properties.items():
+            if prop in current_properties:
+                current_properties[prop] = value
 
-        # Oppdater data i Neo4j
-        session.write_transaction(update_customer_in_neo4j, current_name, current_address)
+        session.write_transaction(update_customer_in_neo4j, customerID, current_properties)
 
     return "Customer updated successfully"
 
-def update_customer_in_neo4j(tx, name, address):
+def update_customer_in_neo4j(tx, customerID, properties):
     query = (
-        "MATCH (c:Customer {name: $name}) SET c.address = $address"
+        "MATCH (c:Customer {customerID: $customerID}) SET c.name = $name, c.address = $address"
     )
-    tx.run(query, name=name, address=address)
+    tx.run(query, customerID=customerID, **properties)
 
 if __name__ == '__main__':
     app.run()

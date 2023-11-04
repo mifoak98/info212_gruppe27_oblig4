@@ -35,99 +35,78 @@ def add_employee_to_neo4j(tx, name, address, branch):
     )
     tx.run(query, name=name, address=address, branch=branch)
 
-@app.route('/get_employee/<name>', methods=['GET'])
-def get_employee(name):
+@app.route('/get_employee/<employeeID>', methods=['GET'])
+def get_employee(employeeID):
     with neo4j_driver._driver.session() as session:
-        result = session.read_transaction(get_employee_from_neo4j, name)
+        result = session.read_transaction(get_employee_from_neo4j, employeeID)
 
     if result:
-        # Extract node properties and convert to a dictionary
         employee_data = {
+            "employeeID": employeeID,
             "name": result["name"],
             "address": result["address"],
             "branch": result["branch"]
         }
         return jsonify(employee_data)
     else:
-        return jsonify({"message": "Employee not found"}), 404  # Return a 404 Not Found status for no result
+        return jsonify({"message": "Employee not found"}), 404
 
-def get_employee_from_neo4j(tx, name):
+def get_employee_from_neo4j(tx, employeeID):
     query = (
-        "MATCH (e:Employee {name: $name}) RETURN e"
+        "MATCH (e:Employee {employeeID: $employeeID}) RETURN e"
     )
-    result = tx.run(query, name=name).single()
+    result = tx.run(query, employeeID=employeeID).single()
     if result:
         return result["e"]
     else:
         return None
 
-@app.route('/delete_employee/<name>', methods=['DELETE'])
-def delete_employee(name):
+@app.route('/delete_employee/<employeeID>', methods=['DELETE'])
+def delete_employee(employeeID):
     with neo4j_driver._driver.session() as session:
-        result = session.write_transaction(delete_employee_from_neo4j, name)
+        result = session.write_transaction(delete_employee_from_neo4j, employeeID)
     if result:
-        return f"Employee {name} has been deleted"
+        return f"Employee {employeeID} has been deleted"
     else:
-        return f"Employee {name} not found"
+        return f"Employee {employeeID} not found"
 
-def delete_employee_from_neo4j(tx, name):
+def delete_employee_from_neo4j(tx, employeeID):
     query = (
-        "MATCH (e:Employee {name: $name}) DELETE e"
+        "MATCH (e:Employee {employeeID: $employeeID}) DELETE e"
     )
-    result = tx.run(query, name=name)
+    result = tx.run(query, employeeID=employeeID)
     return result.consume().counters.nodes_deleted
 
-@app.route('/update_employee/<name>', methods=['PUT'])
-def update_employee(name):
+@app.route('/update_employee/<employeeID>', methods=['PUT'])
+def update_employee(employeeID):
     data = request.get_json()
-    new_address = data.get('address')
-    
+    updated_properties = data.get('updated_properties')
 
     with neo4j_driver._driver.session() as session:
-        result = session.read_transaction(get_employee_from_neo4j, name)
+        result = session.read_transaction(get_employee_from_neo4j, employeeID)
 
         if not result:
             return "Employee not found"
 
-        # Hent eksisterende verdier
-        current_name = result["name"]
-        current_address = result["address"]
-        current_branch = result["branch"]
+        current_properties = {
+            "name": result["name"],
+            "address": result["address"],
+            "branch": result["branch"]
+        }
 
-        # Oppdater kun de feltene som er angitt i JSON-dataen
-        if new_address:
-            current_address = new_address
+        for prop, value in updated_properties.items():
+            if prop in current_properties:
+                current_properties[prop] = value
 
-        # Oppdater data i Neo4j
-        session.write_transaction(update_employee_in_neo4j, current_name, current_address, current_branch)
+        session.write_transaction(update_employee_in_neo4j, employeeID, current_properties)
 
     return "Employee updated successfully"
 
-def update_employee_in_neo4j(tx, name, address, branch):
+def update_employee_in_neo4j(tx, employeeID, properties):
     query = (
-        "MATCH (e:Employee {name: $name}) SET e.address = $address"
+        "MATCH (e:Employee {employeeID: $employeeID}) SET e.name = $name, e.address = $address, e.branch = $branch"
     )
-    tx.run(query, name=name, address=address)
-
-
-@app.route('/add_car', methods=["POST"])
-def add_car():
-    data = request.get_json()
-    carID = data.get("carID")
-    car_brand = data.get("car_brand")
-    availability = data.get("availability")
-
-    with neo4j_driver._driver.session() as session:
-        session.write_transaction(add_car_to_neo4j, carID, car_brand, availability)
-
-    return "Car added to Neo4j"
-
-def add_car_to_neo4j(tx, carID, car_brand, availability):
-    query = (
-        "CREATE (e:Car {carID: $carID, car_branc: $car_brand, availability: $availability})"
-    )
-    tx.run(query, carID=carID, car_brand=car_brand, availability=availability)
-
+    tx.run(query, employeeID=employeeID, **properties)
 
 if __name__ == '__main__':
     app.run()
