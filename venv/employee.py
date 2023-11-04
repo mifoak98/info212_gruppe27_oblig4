@@ -15,16 +15,7 @@ neo4j_driver = Neo4jDriver("neo4j+s://a0f6f9eb.databases.neo4j.io", "neo4j", "3h
 
 @app.route('/')
 def index():
-    with neo4j_driver._driver.session() as session:
-        result = session.run("MATCH (n:Employee) RETURN n LIMIT 25")
-        nodes = [record['n']['name'] for record in result]
-        
-    response_data = {
-        "data": nodes,
-        "message": "Hello INFO212"
-    }
-    
-    return jsonify(response_data)
+    return "Welcome"
 
 @app.route('/add_employee', methods=['POST'])
 def add_employee():
@@ -136,8 +127,6 @@ def add_car_to_neo4j(tx, carID, car_brand, availability):
         "CREATE (e:Car {carID: $carID, car_branc: $car_brand, availability: $availability})"
     )
     tx.run(query, carID=carID, car_brand=car_brand, availability=availability)
-        
-
 
 
 if __name__ == '__main__':

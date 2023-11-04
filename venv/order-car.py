@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 
-app = Flask(__name)
+app = Flask(__name__)
 
 # Sample data structures to keep track of customers and cars
 customers = {}
