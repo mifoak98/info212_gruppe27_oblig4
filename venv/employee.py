@@ -119,14 +119,6 @@ def update_employee_in_neo4j(tx, name, address, branch):
     tx.run(query, name=name, address=address)
 
 
-
-
-
-
-
-
-
-
 @app.route('/add_car', methods=["POST"])
 def add_car():
     data = request.get_json()

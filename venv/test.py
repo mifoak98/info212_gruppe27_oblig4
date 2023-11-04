@@ -28,16 +28,7 @@ customers = [
 
 @app.route('/')
 def index():
-    with neo4j_driver._driver.session() as session:
-        result = session.run("MATCH (n:Employee) RETURN n LIMIT 25")
-        nodes = [record['n']['name'] for record in result]
-        
-    response_data = {
-        "data": nodes,
-        "message": "Hello INFO212"
-    }
-    
-    return jsonify(response_data)
+    return "Welcome"
 
 
 def find_car(car_id):
