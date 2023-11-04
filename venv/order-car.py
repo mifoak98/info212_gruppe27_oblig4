@@ -6,6 +6,10 @@ app = Flask(__name__)
 customers = {}
 cars = {}
 
+@app.route('/')
+def index():
+    return "Welcome"
+
 @app.route('/order-car', methods=['POST'])
 def order_car():
     customer_id = request.json.get('customer_id')
