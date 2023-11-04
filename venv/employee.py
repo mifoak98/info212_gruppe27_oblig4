@@ -20,20 +20,21 @@ def index():
 @app.route('/add_employee', methods=['POST'])
 def add_employee():
     data = request.get_json()
+    employeeID = data.get("employeeID")
     name = data.get("name")
     address = data.get("address")
     branch = data.get("branch")
 
     with neo4j_driver._driver.session() as session:
-        session.write_transaction(add_employee_to_neo4j, name, address, branch)
+        session.write_transaction(add_employee_to_neo4j, employeeID, name, address, branch)
 
-    return "Employee added to Neo4j"
+    return f"Employee {employeeID} added to Neo4j"
 
-def add_employee_to_neo4j(tx, name, address, branch):
+def add_employee_to_neo4j(tx, employeeID, name, address, branch):
     query = (
-        "CREATE (e:Employee {name: $name, address: $address, branch: $branch})"
+        "CREATE (e:Employee {employeeID: $employeeID, name: $name, address: $address, branch: $branch})"
     )
-    tx.run(query, name=name, address=address, branch=branch)
+    tx.run(query, employeeID=employeeID, name=name, address=address, branch=branch)
 
 @app.route('/get_employee/<employeeID>', methods=['GET'])
 def get_employee(employeeID):
@@ -49,7 +50,7 @@ def get_employee(employeeID):
         }
         return jsonify(employee_data)
     else:
-        return jsonify({"message": "Employee not found"}), 404
+        return jsonify({"message": "Employee not found"}, 404)
 
 def get_employee_from_neo4j(tx, employeeID):
     query = (
@@ -82,25 +83,28 @@ def update_employee(employeeID):
     data = request.get_json()
     updated_properties = data.get('updated_properties')
 
-    with neo4j_driver._driver.session() as session:
-        result = session.read_transaction(get_employee_from_neo4j, employeeID)
+    if updated_properties is not None:
+        with neo4j_driver._driver.session() as session:
+            result = session.read_transaction(get_employee_from_neo4j, employeeID)
 
-        if not result:
-            return "Employee not found"
+            if not result:
+                return "Employee not found"
 
-        current_properties = {
-            "name": result["name"],
-            "address": result["address"],
-            "branch": result["branch"]
-        }
+            current_properties = {
+                "name": result["name"],
+                "address": result["address"],
+                "branch": result["branch"]
+            }
 
-        for prop, value in updated_properties.items():
-            if prop in current_properties:
-                current_properties[prop] = value
+            for prop, value in updated_properties.items():
+                if prop in current_properties:
+                    current_properties[prop] = value
 
-        session.write_transaction(update_employee_in_neo4j, employeeID, current_properties)
+            session.write_transaction(update_employee_in_neo4j, employeeID, current_properties)
 
-    return "Employee updated successfully"
+        return "Employee updated successfully"
+    else:
+        return "No updated properties provided in the request.", 400
 
 def update_employee_in_neo4j(tx, employeeID, properties):
     query = (

@@ -20,19 +20,21 @@ def index():
 @app.route('/add_customer', methods=['POST'])
 def add_customer():
     data = request.get_json()
+    customerID = data.get("customerID")
     name = data.get("name")
     address = data.get("address")
+    status = data.get("status")
 
     with neo4j_driver._driver.session() as session:
-        session.write_transaction(add_customer_to_neo4j, name, address)
+        session.write_transaction(add_customer_to_neo4j, customerID, name, address, status)
 
-    return "Customer added to Neo4j"
+    return f"Customer {customerID} added to Neo4j"
 
-def add_customer_to_neo4j(tx, name, address):
+def add_customer_to_neo4j(tx, customerID, name, address, status):
     query = (
-        "CREATE (c:Customer {name: $name, address: $address})"
+        "CREATE (c:Customer {customerID: $customerID, name: $name, address: $address, status: $status})"
     )
-    tx.run(query, name=name, address=address)
+    tx.run(query, customerID=customerID, name=name, address=address, status=status)
 
 @app.route('/get_customer/<customerID>', methods=['GET'])
 def get_customer(customerID):
@@ -43,7 +45,8 @@ def get_customer(customerID):
         customer_data = {
             "customerID": customerID,
             "name": result["name"],
-            "address": result["address"]
+            "address": result["address"],
+            "status": result["status"]
         }
         return jsonify(customer_data)
     else:
@@ -88,7 +91,8 @@ def update_customer(customerID):
 
         current_properties = {
             "name": result["name"],
-            "address": result["address"]
+            "address": result["address"],
+            "status": result["status"]
         }
 
         for prop, value in updated_properties.items():
@@ -101,7 +105,7 @@ def update_customer(customerID):
 
 def update_customer_in_neo4j(tx, customerID, properties):
     query = (
-        "MATCH (c:Customer {customerID: $customerID}) SET c.name = $name, c.address = $address"
+        "MATCH (c:Customer {customerID: $customerID}) SET c.name = $name, c.address = $address, c.status = $status"
     )
     tx.run(query, customerID=customerID, **properties)
 
