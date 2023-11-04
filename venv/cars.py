@@ -20,7 +20,7 @@ def index():
 @app.route('/add_car', methods=['POST'])
 def add_car():
     data = request.get_json()
-    carID = data.get("carID")  # Legg til carID fra JSON-payload
+    carID = data.get("carID")
     make = data.get("make")
     model = data.get("model")
     year = data.get("year")
@@ -36,7 +36,7 @@ def add_car_to_neo4j(tx, carID, make, model, year, status):
         "CREATE (c:Car {carID: $carID, make: $make, model: $model, year: $year, status: $status})"
     )
     tx.run(query, carID=carID, make=make, model=model, year=year, status=status)
-
+    
 @app.route('/get_car/<carID>', methods=['GET'])
 def get_car(carID):
     with neo4j_driver._driver.session() as session:

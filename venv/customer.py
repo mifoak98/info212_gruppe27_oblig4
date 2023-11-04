@@ -50,7 +50,7 @@ def get_customer(customerID):
         }
         return jsonify(customer_data)
     else:
-        return jsonify({"message": "Customer not found"}), 404  # Return a 404 Not Found status for no result
+        return jsonify({"message": "Customer not found"}), 404
 
 def get_customer_from_neo4j(tx, customerID):
     query = (

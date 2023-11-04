@@ -53,10 +53,8 @@ def return_car(tx, customerID, carID, car_status):
         car_status = "available"
 
     with neo4j_driver._driver.session() as session:
-        # Delete the "BOOKED" relationship
         session.write_transaction(delete_booking_relationship, customerID, carID)
 
-        # Update properties
         session.write_transaction(update_car_status_and_reset_id, carID, car_status)
         session.write_transaction(update_customer_status, customerID)
 
@@ -85,13 +83,11 @@ def car_order():
     customerID = data.get("customerID")
     carID = data.get("carID")
 
-    # Check if the customer has already booked the car
     with neo4j_driver._driver.session() as session:
         car_result = session.read_transaction(check_car_availability, carID)
 
     if car_result:
         if car_result["car"]["status"] == "available":
-            # Check if the customer has already booked the car
             with neo4j_driver._driver.session() as session:
                 existing_booking = session.read_transaction(check_existing_booking, customerID, carID)
 
@@ -99,11 +95,9 @@ def car_order():
                 print(f"Car {carID} is already booked by customer {customerID}")
                 return "Car is already booked by the same customer", 400
             else:
-                # Change the car's status to 'booked'
                 with neo4j_driver._driver.session() as session:
                     session.write_transaction(update_car_status, carID, "booked")
 
-                # Log the car rental
                 with neo4j_driver._driver.session() as session:
                     session.write_transaction(log_car_rental, customerID, carID)
 
